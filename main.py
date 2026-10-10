@@ -1,17 +1,28 @@
-from aiogram import Router, F
-from aiogram.types import Message
-from aiogram.fsm.context import FSMContext
-from states import *
-from asyncio import *
-from aiogram.fsm.state import State, StatesGroup
+import asyncio
 from aiogram import Bot, Dispatcher
-from aiogram.types import ReplyKeyboardMarkup, KeyboardButton, InlineKeyboardMarkup, InlineKeyboardButton
-from aiogram.filters import StateFilter
-from aiogram.filters import Command
+from aiogram.fsm.storage.memory import MemoryStorage
+from aiogram.types import BotCommand
 
-from
+from bot import rtr as tasks_router
+from bot import *
 
-if __name__ == '__main__':
-    pass
 
-# See PyCharm help at https://www.jetbrains.com/help/pycharm/
+async def commands(bot: Bot):
+    commands = [BotCommand(command='start', description='/start'),
+                BotCommand(command='set', description='/set')]
+    await bot.set_my_commands(commands)
+
+
+async def main():
+    storage = MemoryStorage()
+    bot = Bot(token="8937550208:AAFhsjwCyKtncwiTILwBmyBXMxtDb_fYDhw")
+    dp = Dispatcher(storage=storage)
+
+    dp.include_router(tasks_router)
+
+    print("Бот запущен")
+    await dp.start_polling(bot)
+    await FSMContext.set_state(TaskForm.waiting_importance)
+
+if __name__ == "__main__":
+    asyncio.run(main())
