@@ -6,7 +6,7 @@ from aiogram.types import BotCommand
 from bot import rtr as tasks_router
 from bot import *
 
-tokeen = open('env.txt').readlines()[1]
+tokeen = open('venv/secrets.env').readlines()[1]
 
 async def commands(bot: Bot):
     commands = [BotCommand(command='start', description='/start'),

@@ -1,7 +1,7 @@
 from groq import Groq
 import os
 
-ap_key = open('env.txt').readlines()[0].replace('\n', '')
+ap_key = open('venv/secrets.env').readlines()[0].replace('\n', '')
 client = Groq(api_key=ap_key)
 
 syst = """
