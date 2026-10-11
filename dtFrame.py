@@ -92,6 +92,7 @@ def status_dt(user, ind, r):
         conn.execute(text(f"UPDATE lists SET status={r} WHERE t_id='{i}';"))
         conn.commit()
 
+
 def sorted_list(sort_type, user):
     with engine.connect() as conn:
         res = conn.execute(

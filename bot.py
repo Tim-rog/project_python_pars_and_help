@@ -11,6 +11,7 @@ from aiogram.filters import Command
 from aiogram.types import ChatMemberUpdated
 from aiogram.filters import IS_MEMBER, IS_NOT_MEMBER, ChatMemberUpdatedFilter
 
+from grq import *
 from dtFrame import *
 
 
@@ -62,13 +63,19 @@ commands = ['add chat', 'start', '@', 'set']
 
 
 async def our_filter(message: Message) -> bool:
+    if message.text is None:
+        return False
     return len(message.text) > 3 and len(set(message.text)) > 3 and all([message.text not in x for x in commands]+[x not in message.text for x in commands])
 
 
 @rtr.message(our_filter)
 async def resent(message: Message, bot: Bot):
-    for i in list(get_chats(message.chat.id)):
-        await bot.send_message(i[0], message.text)
+    print(await classify(message.text))
+    importance = await classify(message.text)
+    if importance == 'IMPORTANT':
+        for i in list(get_chats(message.chat.id)):
+            if i[0] != message.from_user.id:
+                await bot.send_message(i[0], f'От:@{message.from_user.username}\n\n{message.text}')
 
 
 @rtr.message(Command('start'))
@@ -93,27 +100,3 @@ async def adding(message: Message, state: FSMContext, bot:Bot):
     chats(message.from_user.id, await sparse(message.text, bot))
     print('bubu', await sparse(message.text, bot))
     await message.answer("Чаты добавленыны")
-
-
-
-#
-#
-# @rtr.message(F.text == "New list")
-# async def button1(message: Message, state: FSMContext):
-#     await message.answer("Send your list")
-#     await state.set_state(TaskForm.waiting_task)
-#
-#
-# @rtr.message(F.text == "My lists")
-# async def button1(message: Message, state: FSMContext):
-#     await message.answer("твои таски: ")
-#     dt = unleash(message.from_user.id)
-#     for l, i in dt.iterrows():
-#         await message.answer(taska(i['task']))
-#
-#
-# @rtr.message(TaskForm.waiting_task)
-# async def process_task(message: Message, state: FSMContext):
-#     await message.answer(f"Твоя таска:\n {taska(message.text)}", reply_markup=markup)
-#     create_list(message.from_user.id, message.text)
-#     await state.clear()
