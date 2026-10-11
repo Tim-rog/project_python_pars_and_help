@@ -6,6 +6,7 @@ from aiogram.types import BotCommand
 from bot import rtr as tasks_router
 from bot import *
 
+tokeen = open('env.txt').readlines()[1]
 
 async def commands(bot: Bot):
     commands = [BotCommand(command='start', description='/start'),
@@ -15,7 +16,7 @@ async def commands(bot: Bot):
 
 async def main():
     storage = MemoryStorage()
-    bot = Bot(token="8937550208:AAFhsjwCyKtncwiTILwBmyBXMxtDb_fYDhw")
+    bot = Bot(token=tokeen)
     dp = Dispatcher(storage=storage)
 
     dp.include_router(tasks_router)

@@ -1,7 +1,8 @@
 from groq import Groq
 import os
 
-client = Groq(api_key="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")
+ap_key = open('env.txt').readlines()[0].replace('\n', '')
+client = Groq(api_key=ap_key)
 
 syst = """
 Ты фильтр сообщений из рабочих чатов.
@@ -12,6 +13,7 @@ SKIP — флуд, мемы, ок, привет, стикеры, пустая б
 """
 for m in client.models.list().data:
     print(m.id)
+
 async def classify(text: str) -> str:
     r = client.chat.completions.create(
         model="openai/gpt-oss-safeguard-20b",
