@@ -1,7 +1,10 @@
 import os
 import asyncio
 
+from aiogram.client.default import DefaultBotProperties
 from aiogram.client.session.aiohttp import AiohttpSession
+from aiogram.enums import ParseMode
+
 from features.service import router as service_router
 from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage
@@ -26,7 +29,7 @@ async def set_commands(bot: Bot):
 async def main():
     session = AiohttpSession(proxy="http://127.0.0.1:10808")
 
-    bot = Bot(token=BOT_TOKEN, session=session)
+    bot = Bot(token=BOT_TOKEN, session=session, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
     dp = Dispatcher(storage=MemoryStorage())
     dp.include_router(service_router)
 

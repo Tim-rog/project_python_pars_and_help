@@ -10,7 +10,7 @@ def categories_kb() -> InlineKeyboardMarkup:
     for category, label in CATEGORY_LABELS.items():
         kb.button(text=label, callback_data=CategoryCb(value=category))
     kb.button(
-        text="✖️ Отмена",
+        text="Отмена",
         callback_data=WizardCb(action="cancel"),
         style=ButtonStyle.DANGER,
     )
@@ -24,7 +24,7 @@ def nav_kb(back: bool = True, skip: bool = False) -> InlineKeyboardMarkup:
         kb.button(text="Назад", callback_data=WizardCb(action="back"))
     if skip:
         kb.button(text="Пропустить", callback_data=WizardCb(action="skip"))
-    kb.button(text="✖️ Отмена", callback_data=WizardCb(action="cancel"),
+    kb.button(text="Отмена", callback_data=WizardCb(action="cancel"),
               style=ButtonStyle.DANGER)
     kb.adjust(2, 1)
     return kb.as_markup()

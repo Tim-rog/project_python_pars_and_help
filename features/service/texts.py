@@ -2,10 +2,13 @@ TOTAL_STEPS = 5
 
 
 def step(n: int, question: str) -> str:
-    return f"➕ Новое объявление · Шаг {n}/{TOTAL_STEPS}\n\n{question}"
+    return f"📝 Новое объявление • Шаг {n}/{TOTAL_STEPS}\n\n{question}"
 
 
-ACTION_CANCELED = "❌ Создание отменено"
-ASK_CATEGORY = "Что отдаёшь?"
-ASK_TITLE = "Напиши название."
+ACTION_CANCELED = "❌ Создание отменено."
+TEXT_NEEDED = "ⓘ На этом шаге нужно отправить <b>текст</b>."
+ASK_CATEGORY = "<b>Что отдаёшь?</b>\n\nВыбери категорию вещи."
+ASK_TITLE = "<b>Как назовём вещь?</b>\n\nНапиши короткое и понятное название."
+ASK_DESCRIPTION = "<b>Добавим описание</b>.\n\nРасскажи о состоянии и особенностях вещи."
+ASK_PHOTOS = "<b>Есть фото?</b>\n\nПришли фотографию вещи или пропусти этот шаг."
 CANCELLED = "Создание объявления отменено."
