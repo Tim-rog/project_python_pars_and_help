@@ -1,4 +1,4 @@
-TOTAL_STEPS = 5
+TOTAL_STEPS = 6
 
 
 def step(n: int, question: str) -> str:
@@ -7,6 +7,7 @@ def step(n: int, question: str) -> str:
 
 ACTION_CANCELED = "❌ Создание отменено."
 TEXT_NEEDED = "ⓘ На этом шаге нужно отправить <b>текст</b>."
+PHOTO_NEEDED = "ⓘ На этом шаге нужно отправить <b>фото</b>."
 ASK_CATEGORY = "<b>Что отдаёшь?</b>\n\nВыбери категорию вещи."
 ASK_TITLE = "<b>Как назовём вещь?</b>\n\nНапиши короткое и понятное название."
 ASK_DESCRIPTION = "<b>Добавим описание</b>.\n\nРасскажи о состоянии и особенностях вещи."

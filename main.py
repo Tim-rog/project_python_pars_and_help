@@ -27,7 +27,7 @@ async def set_commands(bot: Bot):
 
 
 async def main():
-    session = AiohttpSession(proxy="http://127.0.0.1:10808")
+    session = AiohttpSession()
 
     bot = Bot(token=BOT_TOKEN, session=session, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
     dp = Dispatcher(storage=MemoryStorage())

@@ -11,6 +11,10 @@ from .screens import SCREENS
 from .states import NewItem
 router = Router(name="service")
 
+TEXT_FIELDS = {
+    NewItem.title.state: "title",
+    NewItem.description.state: "description",
+}
 
 # @router.message(Command("open"))
 # async def open_shop(message: Message):
@@ -71,20 +75,28 @@ async def process_step(message: types.Message, state: FSMContext):
     await message.delete()
 
 
-@router.message(NewItem.title, F.text)
-async def process_title(message: types.Message, state: FSMContext):
-    await state.update_data(title=message.text)
+@router.message(StateFilter(*TEXT_FIELDS), F.text)
+async def process_text(message: types.Message, state: FSMContext):
+    field = TEXT_FIELDS[await state.get_state()]
+    await state.update_data({field: message.text})
     await process_step(message=message, state=state)
 
 
-@router.message(NewItem.description, F.text)
-async def process_description(message: types.Message, state: FSMContext):
-    await state.update_data(description=message.text)
-    await process_step(message=message, state=state)
-
-@router.message(NewItem.title, ~F.text)
-async def process_title(message: types.Message):
+@router.message(StateFilter(*TEXT_FIELDS), ~F.text)
+async def need_text(message: types.Message):
     await message.answer(texts.TEXT_NEEDED)
+
+
+@router.message(StateFilter(NewItem.photos), F.photo)
+async def process_photo(message: types.Message, state: FSMContext):
+    await state.update_data(field = message.photo[0].file_id)
+    await process_step(message=message, state=state)
+    print(await state.get_data())
+
+
+@router.message(StateFilter(NewItem.photos), ~F.photo)
+async def need_photo(message: types.Message):
+    await message.answer(texts.PHOTO_NEEDED)
 
 
 @router.callback_query(StateFilter(NewItem), WizardCb.filter(F.action == "back"))
