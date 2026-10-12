@@ -15,7 +15,7 @@ def in_chats(user, ch):
     '''Смотрит, есть ли связка чат+пользователь в базеc(chat, user_id)'''
     with engine.connect() as conn:
         new = conn.execute(text("""SELECT COUNT(*) FROM "CHATS" WHERE chat= :ch AND user_id= :id"""),
-                        {'ch': int(ch), 'id': int(user)}).scalar() == 0
+                        {'ch': int(ch), 'id': int(user)}).scalar() > 0
         conn.commit()
     return new
 
@@ -31,7 +31,7 @@ def add_chat(user, ch):
 def del_chat(user, ch):
     '''Удаляет из базы чат+пользователь'''
     with engine.connect() as conn:
-        conn.execute(text('DELETE FROM "CHATS" WHERE chat = :ch AND user_id = :id)'),
+        conn.execute(text('DELETE FROM "CHATS" WHERE chat = :ch AND user_id = :id'),
                          {'ch': int(ch), 'id': int(user)})
         conn.commit()
 

@@ -6,11 +6,14 @@ from aiogram.types import BotCommand
 from bot import rtr as tasks_router
 from bot import *
 
+
 tokeen = open('venv/secrets.env').readlines()[1]
+
 
 async def commands(bot: Bot):
     commands = [BotCommand(command='start', description='/start'),
-                BotCommand(command='set', description='/set')]
+                BotCommand(command='set', description='/set'),
+                BotCommand(command='deset', description='/deset')]
     await bot.set_my_commands(commands)
 
 
@@ -23,7 +26,6 @@ async def main():
 
     print("Бот запущен")
     await dp.start_polling(bot)
-    await FSMContext.set_state(TaskForm.waiting_importance)
 
 if __name__ == "__main__":
     asyncio.run(main())

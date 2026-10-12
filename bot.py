@@ -15,6 +15,7 @@ from grq import *
 from dtFrame import *
 
 
+#В разработке
 keyboard = ReplyKeyboardMarkup(
     keyboard=[
         [KeyboardButton(text='add chat')]
@@ -62,6 +63,7 @@ async def any(message: Message):
 
 @rtr.message(Command('set'))
 async def set_chat(message: Message):
+    '''Смотрит, отслеживает ли пользователь чат, если нет, начинает отслеживать'''
     if message.chat.type in ('group', 'supergroup'):
         user = message.from_user.id
         chat = message.chat.id
@@ -72,6 +74,7 @@ async def set_chat(message: Message):
 
 @rtr.message(Command('deset'))
 async def de_set_chat(message: Message):
+    '''Смотрит, отслеживает ли пользователь чат, если да, это прекращается'''
     if message.chat.type in ('group', 'supergroup'):
         user = message.from_user.id
         chat = message.chat.id
