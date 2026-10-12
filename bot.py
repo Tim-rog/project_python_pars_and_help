@@ -15,14 +15,6 @@ from grq import *
 from dtFrame import *
 
 
-def taska(text):
-    result = ''
-    for i in text.split('.'):
-        local = '\n'.join([f'{x.replace(";", "")}' for x in i.split(';')])
-        result += f'*   \n{local}\n'
-    return result
-
-
 keyboard = ReplyKeyboardMarkup(
     keyboard=[
         [KeyboardButton(text='add chat')]
@@ -30,73 +22,60 @@ keyboard = ReplyKeyboardMarkup(
     resize_keyboard=True)
 
 
-class TaskForm(StatesGroup):
-    waiting_chat = State()
-    waiting_importance = State()
-
-
 rtr = Router()
 
 
+#Временно не нужно
 markup = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text='Delete'), InlineKeyboardButton(text='Redict')]
     ],
 )
 
-
-async def sparse(mess, bot):
-    res = []
-    print(''.join(''.join(mess.split(',')).split(' ')).split('@'))
-    for x in ''.join(''.join(mess.split(',')).split(' ')).split('@'):
-        print('wv', x)
-        try:
-            user = await bot.get_chat('@'+x)
-            res.append(int(user.id))
-        except Exception as e:
-            print(e)
-            continue
-        print('mmm', int(user.id))
-    return res
-
-
 commands = ['add chat', 'start', '@', 'set']
+i_mess = 8
+j_mess = 5
 
 
 async def our_filter(message: Message) -> bool:
+    '''Фильтр, который проверяет, что длина сообщения больше i, и в сообщение использованно больше j различных символов.
+    А также, смотрит, чтобы сообщение не совпадало с командамиц'''
     if message.text is None:
         return False
-    return len(message.text) > 3 and len(set(message.text)) > 3 and all([message.text not in x for x in commands]+[x not in message.text for x in commands])
+    return len(message.text) > i_mess and len(set(message.text)) > j_mess and all([message.text not in x for x in commands]+[x not in message.text for x in commands])
 
 
 @rtr.message(our_filter)
 async def resent(message: Message, bot: Bot):
+    '''Читает осмысленные сообщения в чате, затем возрващает'''
     print(await classify(message.text))
     importance = await classify(message.text)
     if importance == 'IMPORTANT':
         for i in list(get_chats(message.chat.id)):
             if i[0] != message.from_user.id:
-                await bot.send_message(i[0], f'От:@{message.from_user.username}\n\n{message.text}')
+                await bot.send_message(i[0], f'От: @{message.from_user.username}\n\n{message.text}')
 
 
 @rtr.message(Command('start'))
-async def any(message: Message, state: FSMContext):
+async def any(message: Message):
     await message.answer("Добро пожаловать", reply_markup=keyboard)
 
 
 @rtr.message(Command('set'))
 async def set_chat(message: Message):
-    new = 0
     if message.chat.type in ('group', 'supergroup'):
         user = message.from_user.id
         chat = message.chat.id
-        new = chats(user, chat)
-    if new:
-        await message.answer("Готово, теперь этот чат будет отслеживаться")
+        if not in_chats(user, chat):
+            add_chat(user, chat)
+            await message.answer("Готово, теперь этот чат будет отслеживаться")
 
 
-@rtr.message(TaskForm.waiting_chat, F.text.contains("@"))
-async def adding(message: Message, state: FSMContext, bot:Bot):
-    await state.clear()
-    chats(message.from_user.id, await sparse(message.text, bot))
-    print('bubu', await sparse(message.text, bot))
-    await message.answer("Чаты добавленыны")
+@rtr.message(Command('deset'))
+async def de_set_chat(message: Message):
+    if message.chat.type in ('group', 'supergroup'):
+        user = message.from_user.id
+        chat = message.chat.id
+        if in_chats(user, chat):
+            del_chat(user, chat)
+            await message.answer("Этот чат больше не будет отслеживаться")
+
