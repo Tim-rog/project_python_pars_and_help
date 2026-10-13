@@ -33,4 +33,4 @@ class TermsCb(CallbackData, prefix="cat"):
 
 
 class WizardCb(CallbackData, prefix="wiz"):
-    action: str  # "cancel" | "back" | "skip"
+    action: str  # "cancel" | "back" | "skip" | "done"

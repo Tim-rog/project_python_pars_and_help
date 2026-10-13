@@ -1,12 +1,11 @@
-from aiogram import Bot, F, Router, types
+from aiogram import F, Router, types
 from aiogram.filters import Command, StateFilter
 from aiogram.fsm.context import FSMContext
-from aiogram.fsm.state import State
 from aiogram.types import CallbackQuery, Message
 
 from . import texts
 from .callbacks import CategoryCb, WizardCb, TermsCb
-from .keyboards import categories_kb, nav_kb, terms_kb
+from .keyboards import categories_kb, nav_kb, terms_kb, photos_kb
 from .screens import SCREENS
 from .states import NewItem
 router = Router(name="service")
@@ -24,6 +23,8 @@ TEXT_FIELDS = {
     NewItem.title.state: "title",
     NewItem.description.state: "description",
 }
+
+MAX_PHOTOS = 5
 
 # @router.message(Command("open"))
 # async def open_shop(message: Message):
@@ -50,11 +51,9 @@ async def new_item(message: Message, state: FSMContext):
 
 
 @router.callback_query(NewItem.category, CategoryCb.filter())
-async def pick_category(callback: CallbackQuery, callback_data: CategoryCb,
-                        state: FSMContext):
+async def pick_category(callback: CallbackQuery, callback_data: CategoryCb, state: FSMContext):
     await state.update_data(category=callback_data.value)
-    await state.set_state(NewItem.title)
-    await callback.message.edit_text(texts.step(2, texts.ASK_TITLE), reply_markup=nav_kb())
+    await process_step(callback.message, state, delete_msg=False)
     await callback.answer()
 
 
@@ -117,8 +116,31 @@ async def need_text(message: types.Message, state: FSMContext):
 
 @router.message(StateFilter(NewItem.photos), F.photo)
 async def process_photo(message: types.Message, state: FSMContext):
-    await state.update_data(photo=message.photo[-1].file_id)
-    await process_step(message=message, state=state)
+    photos = list(await state.get_value("photos", []))
+    await message.delete()
+
+    if len(photos) >= MAX_PHOTOS:
+        return
+
+    photos.append(message.photo[-1].file_id)
+    await state.update_data(photos=photos)
+
+    kb = photos_kb() if len(photos) == 0 else photos_kb(has_photos=True)
+
+    idx = await get_state_index(state)
+    text = f"{texts.ASK_PHOTOS}\n\n📎 Загружено: {len(photos)}/{MAX_PHOTOS}"
+
+    await message.bot.edit_message_text(text=texts.step(idx + 1, text),
+                                        message_id=await state.get_value("wizard_msg_id"),
+                                        chat_id=message.chat.id,
+                                        reply_markup=kb
+                                        )
+
+
+@router.callback_query(NewItem.photos, WizardCb.filter(F.action == "done"))
+async def photos_done(callback: CallbackQuery, state: FSMContext):
+    await callback.answer()
+    await process_step(callback.message, state, delete_msg=False)
 
 
 @router.message(StateFilter(NewItem.photos), ~F.photo)
@@ -127,7 +149,7 @@ async def need_photo(message: types.Message, state: FSMContext):
 
 
 @router.callback_query(NewItem.terms, TermsCb.filter())
-async def terms_free(callback: CallbackQuery, callback_data: TermsCb,  state: FSMContext):
+async def pick_terms(callback: CallbackQuery, callback_data: TermsCb,  state: FSMContext):
     await state.update_data(terms=callback_data.value)
     await callback.answer()
 
@@ -141,6 +163,10 @@ async def terms_free(callback: CallbackQuery, callback_data: TermsCb,  state: FS
 
 @router.message(NewItem.terms, F.text)
 async def terms_text(message: Message, state: FSMContext):
+    # TODO: если юзер два раза подряд введёт неправильную строку, то телеграм выкинет ошибку TelegramBadRequest
+    # TODO: message is not modified: specified new message content and reply markup are exactly the same
+    # TODO: нужно сделать функцию save_edit, которая будет ловить эту ошибку через try except, т.к. это сильно
+    # TODO: засоряет консоль
     terms = await state.get_value("terms")
     if terms is None or terms == "free":
         return

@@ -7,7 +7,7 @@ from aiogram.enums import ParseMode
 
 from features.service import router as service_router
 from aiogram import Bot, Dispatcher
-from aiogram.fsm.storage.memory import MemoryStorage
+from aiogram.fsm.storage.memory import MemoryStorage, SimpleEventIsolation
 from aiogram.types import BotCommand
 
 from dotenv import load_dotenv
@@ -31,7 +31,7 @@ async def main():
     session = AiohttpSession(proxy=proxy)
 
     bot = Bot(token=BOT_TOKEN, session=session, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
-    dp = Dispatcher(storage=MemoryStorage())
+    dp = Dispatcher(storage=MemoryStorage(), events_isolation=SimpleEventIsolation())
     dp.include_router(service_router)
 
     dp.startup.register(set_commands)

@@ -34,6 +34,16 @@ def nav_kb(back: bool = True, skip: bool = False) -> InlineKeyboardMarkup:
     return nav_builder(back, skip).as_markup()
 
 
+def photos_kb(has_photos: bool = False) -> InlineKeyboardMarkup:
+    kb = InlineKeyboardBuilder()
+
+    if has_photos:
+        kb.button(text="Готово", callback_data=WizardCb(action="done"))
+    kb.attach(nav_builder(back=True, skip=not has_photos))
+
+    return kb.as_markup()
+
+
 def terms_kb() -> InlineKeyboardMarkup:
     kb = InlineKeyboardBuilder()
     kb.button(text="Бесплатно", callback_data=TermsCb(value="free"))
