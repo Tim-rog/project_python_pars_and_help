@@ -1,9 +1,39 @@
-TOTAL_STEPS = 6
+from aiogram import html
 
+TOTAL_STEPS = 7
 
 def step(n: int, question: str) -> str:
     return f"📝 Новое объявление • Шаг {n}/{TOTAL_STEPS}\n\n{question}"
 
+def item_preview(data: dict) -> str:
+    terms = TERMS_LABELS[data["terms"]]
+
+    if data["terms"] == "exchange":
+        terms += f": {html.quote(data['exchange'])}"
+    elif data["terms"] == "price":
+        terms += f": {html.quote(str(data['price']))} ₽"
+
+    title = html.quote(data["title"])
+    description = html.quote(data["description"])
+    place = html.quote(data["place"])
+
+    category = html.quote(
+        data.get("category", "Не указана")
+    )
+
+    return (
+        "🔍 <b>Проверь объявление</b>\n"
+        "<i>Вот так его увидят другие студенты</i>\n\n"
+        f"📦 <b>{title}</b>\n"
+        f"📌 {category}\n\n"
+        "📋 <b>Описание:</b>\n"
+        f"{description}\n\n"
+        f"<b>{terms}</b>\n"
+        f"📍 <b>Место:</b> {place}\n"
+        "───────────────────\n"
+        "Всё верно? Опубликуй объявление "
+        "или вернись к редактированию."
+    )
 
 ACTION_CANCELED = "❌ Создание отменено."
 TEXT_NEEDED = "На этом шаге нужно отправить <b>текст</b>."

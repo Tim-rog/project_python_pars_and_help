@@ -1,3 +1,4 @@
+from aiogram import html
 from aiogram import F, Router, types
 from aiogram.filters import Command, StateFilter
 from aiogram.fsm.context import FSMContext
@@ -22,6 +23,7 @@ ALL_FIELDS = {
 TEXT_FIELDS = {
     NewItem.title.state: "title",
     NewItem.description.state: "description",
+    NewItem.place.state: "place",
 }
 
 MAX_PHOTOS = 5
@@ -86,10 +88,34 @@ async def show_error(message: Message, state: FSMContext, error: str, question: 
                                         )
 
 
+async def show_preview(message: types.Message, state: FSMContext):
+    data = await state.get_data()
+    print(data)
+    photos = data["photos"]
+    text = texts.item_preview(data)
+
+    if not photos:
+        await message.answer(text, reply_markup=nav_kb(back=False, skip=True))
+    else:
+        await message.answer_photo(photos[0], caption=text, reply_markup=nav_kb(back=False, skip=True))
+
+
 async def process_step(message: types.Message, state: FSMContext, delete_msg: bool = True):
     message_id = await state.get_value("wizard_msg_id")
     idx = await get_state_index(state)
-    next_state, text, markup = get_state_info(idx + 1)
+    next_state = NewItem.__states__[idx + 1]
+
+    if next_state == NewItem.preview:
+        await state.set_state(next_state)
+        await show_preview(message, state)
+
+        if delete_msg:
+            await message.delete()
+
+        return
+
+    _, text, markup = get_state_info(idx + 1)
+
 
     await message.bot.edit_message_text(text=texts.step(idx + 2, text),
                                         chat_id=message.chat.id,
@@ -120,6 +146,9 @@ async def process_photo(message: types.Message, state: FSMContext):
     await message.delete()
 
     if len(photos) >= MAX_PHOTOS:
+        # TODO: при достижении максимального количества фоток бот просто молчит
+        # TODO: можно оставить так, либо придумать как говорить об этом пользователю
+        # TODO: уже есть функция show_error, но она не подойдёт т.к. делает лишние действия, но можно её переписать
         return
 
     photos.append(message.photo[-1].file_id)

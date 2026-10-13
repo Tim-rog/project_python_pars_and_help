@@ -11,4 +11,5 @@ SCREENS = {
     # NewItem.terms_trade.state: (texts.ASK_TRADE, lambda: nav_kb(back=True)),
     # NewItem.terms_price.state: (texts.ASK_PRICE, lambda: nav_kb(back=True)),
     NewItem.place.state: (texts.ASK_PLACE, lambda: nav_kb(back=True)),
+    NewItem.preview.state: ("заглушка", lambda: nav_kb(back=True)),
 }
