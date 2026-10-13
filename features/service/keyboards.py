@@ -2,7 +2,7 @@ from aiogram.enums import ButtonStyle
 from aiogram.types import InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from .callbacks import CATEGORY_LABELS, CategoryCb, WizardCb
+from .callbacks import CATEGORY_LABELS, CategoryCb, WizardCb, TermsCb
 
 
 def categories_kb() -> InlineKeyboardMarkup:
@@ -18,7 +18,7 @@ def categories_kb() -> InlineKeyboardMarkup:
     return kb.as_markup()
 
 
-def nav_kb(back: bool = True, skip: bool = False) -> InlineKeyboardMarkup:
+def nav_builder(back: bool = True, skip: bool = False) -> InlineKeyboardBuilder:
     kb = InlineKeyboardBuilder()
     if back:
         kb.button(text="Назад", callback_data=WizardCb(action="back"))
@@ -27,4 +27,20 @@ def nav_kb(back: bool = True, skip: bool = False) -> InlineKeyboardMarkup:
     kb.button(text="Отмена", callback_data=WizardCb(action="cancel"),
               style=ButtonStyle.DANGER)
     kb.adjust(2, 1)
+    return kb
+
+
+def nav_kb(back: bool = True, skip: bool = False) -> InlineKeyboardMarkup:
+    return nav_builder(back, skip).as_markup()
+
+
+def terms_kb() -> InlineKeyboardMarkup:
+    kb = InlineKeyboardBuilder()
+    kb.button(text="Бесплатно", callback_data=TermsCb(value="free"))
+    kb.button(text="Обмен", callback_data=TermsCb(value="exchange"))
+    kb.button(text="Цена", callback_data=TermsCb(value="price"))
+    kb.adjust(3)
+
+    kb.attach(nav_builder())
+
     return kb.as_markup()

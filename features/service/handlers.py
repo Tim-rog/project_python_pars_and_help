@@ -5,11 +5,20 @@ from aiogram.fsm.state import State
 from aiogram.types import CallbackQuery, Message
 
 from . import texts
-from .callbacks import CategoryCb, WizardCb, Category
-from .keyboards import categories_kb, nav_kb
+from .callbacks import CategoryCb, WizardCb, TermsCb
+from .keyboards import categories_kb, nav_kb, terms_kb
 from .screens import SCREENS
 from .states import NewItem
 router = Router(name="service")
+
+ALL_FIELDS = {
+    NewItem.category.state: "category",
+    NewItem.title.state: "title",
+    NewItem.description.state: "description",
+    NewItem.photos.state: "photo",
+    NewItem.terms.state: "terms",
+    NewItem.place.state: "place",
+}
 
 TEXT_FIELDS = {
     NewItem.title.state: "title",
@@ -48,6 +57,7 @@ async def pick_category(callback: CallbackQuery, callback_data: CategoryCb,
     await callback.message.edit_text(texts.step(2, texts.ASK_TITLE), reply_markup=nav_kb())
     await callback.answer()
 
+
 async def get_state_index(state: FSMContext) -> int:
     current = await state.get_state()
     states = NewItem.__states__
@@ -55,13 +65,29 @@ async def get_state_index(state: FSMContext) -> int:
 
     return idx
 
+
 def get_state_info(idx: int):
     state = NewItem.__states__[idx]
     text, make_kb = SCREENS[state.state]
 
     return state, text, make_kb
 
-async def process_step(message: types.Message, state: FSMContext):
+
+async def show_error(message: Message, state: FSMContext, error: str, question: str | None = None, kb=None):
+    await message.delete()
+    message_id = await state.get_value("wizard_msg_id")
+    idx = await get_state_index(state)
+    if question is None:
+        _, question, make_kb = get_state_info(idx)
+        kb = make_kb()
+    await message.bot.edit_message_text(text=texts.step(idx + 1, f"{question}\n\n⚠️ {error}"),
+                                        chat_id=message.chat.id,
+                                        message_id=message_id,
+                                        reply_markup=kb,
+                                        )
+
+
+async def process_step(message: types.Message, state: FSMContext, delete_msg: bool = True):
     message_id = await state.get_value("wizard_msg_id")
     idx = await get_state_index(state)
     next_state, text, markup = get_state_info(idx + 1)
@@ -72,31 +98,64 @@ async def process_step(message: types.Message, state: FSMContext):
                                         reply_markup=markup(),
                                         )
     await state.set_state(next_state)
-    await message.delete()
+
+    if delete_msg:
+        await message.delete()
 
 
 @router.message(StateFilter(*TEXT_FIELDS), F.text)
 async def process_text(message: types.Message, state: FSMContext):
-    field = TEXT_FIELDS[await state.get_state()]
+    field = ALL_FIELDS[await state.get_state()]
     await state.update_data({field: message.text})
     await process_step(message=message, state=state)
 
 
 @router.message(StateFilter(*TEXT_FIELDS), ~F.text)
-async def need_text(message: types.Message):
-    await message.answer(texts.TEXT_NEEDED)
+async def need_text(message: types.Message, state: FSMContext):
+    await show_error(message, state, texts.TEXT_NEEDED)
 
 
 @router.message(StateFilter(NewItem.photos), F.photo)
 async def process_photo(message: types.Message, state: FSMContext):
-    await state.update_data(field = message.photo[0].file_id)
+    await state.update_data(photo=message.photo[-1].file_id)
     await process_step(message=message, state=state)
-    print(await state.get_data())
 
 
 @router.message(StateFilter(NewItem.photos), ~F.photo)
-async def need_photo(message: types.Message):
-    await message.answer(texts.PHOTO_NEEDED)
+async def need_photo(message: types.Message, state: FSMContext):
+    await show_error(message, state, texts.PHOTO_NEEDED)
+
+
+@router.callback_query(NewItem.terms, TermsCb.filter())
+async def terms_free(callback: CallbackQuery, callback_data: TermsCb,  state: FSMContext):
+    await state.update_data(terms=callback_data.value)
+    await callback.answer()
+
+    if callback_data.value == "free":
+        await process_step(message=callback.message, state=state, delete_msg=False)
+        return
+
+    text = {"exchange": texts.ASK_TRADE, "price": texts.ASK_PRICE}.get(callback_data.value)
+    await callback.message.edit_text(texts.step(await get_state_index(state) + 1, text), reply_markup=nav_kb(back=True))
+
+
+@router.message(NewItem.terms, F.text)
+async def terms_text(message: Message, state: FSMContext):
+    terms = await state.get_value("terms")
+    if terms is None or terms == "free":
+        return
+
+    if terms == "price":
+        raw = message.text.replace(" ", "").replace("₽", "").replace("р", "")
+        if not raw.isdigit() or not (0 < int(raw) <= 1_000_000):
+            await show_error(message, state, texts.INVALID_PRICE, texts.ASK_PRICE, nav_kb(back=True))
+            return
+
+        await state.update_data({terms: int(raw)})
+    else:
+        await state.update_data({terms: message.text})
+
+    await process_step(message=message, state=state)
 
 
 @router.callback_query(StateFilter(NewItem), WizardCb.filter(F.action == "back"))
@@ -107,10 +166,31 @@ async def wizard_back(callback: CallbackQuery, state: FSMContext):
         await callback.answer("Это первый шаг")
         return
 
+    # нужно, чтобы кнопка "назад" возвращала на предыдущий шаг, если пользователь выбрал "Обмен" или "Цена" и захотел
+    # вернуться назад
+    if await state.get_state() == NewItem.terms.state and await state.get_value("terms"):
+        await state.update_data(terms=None)
+        await callback.message.edit_text(texts.step(idx + 1, texts.ASK_TERMS), reply_markup=terms_kb())
+        await callback.answer()
+        return
+
     prev, text, make_kb = get_state_info(idx - 1)
 
     await state.set_state(prev)
+
+    if prev == NewItem.terms.state:
+        await state.update_data(terms=None)
+
     await callback.message.edit_text(texts.step(idx, text), reply_markup=make_kb())
+    await callback.answer()
+
+
+@router.callback_query(StateFilter(NewItem), WizardCb.filter(F.action == "skip"))
+async def wizard_skip(callback: CallbackQuery, state: FSMContext):
+    field = ALL_FIELDS[await state.get_state()]
+
+    await state.update_data({field: None})
+    await process_step(message=callback.message, state=state, delete_msg=False)
     await callback.answer()
 
 
@@ -119,5 +199,3 @@ async def wizard_cancel(callback: CallbackQuery, state: FSMContext):
     await state.clear()
     await callback.message.edit_text(texts.ACTION_CANCELED)
     await callback.answer()
-
-

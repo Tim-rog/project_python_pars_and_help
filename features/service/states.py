@@ -6,3 +6,6 @@ class NewItem(StatesGroup):
     title = State()
     description = State()
     photos = State()
+    terms = State()
+    place = State()
+    preview = State()

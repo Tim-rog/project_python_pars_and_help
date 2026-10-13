@@ -28,5 +28,9 @@ class CategoryCb(CallbackData, prefix="cat"):
     value: Category
 
 
+class TermsCb(CallbackData, prefix="cat"):
+    value: str # "free" | "exchange" | "price"
+
+
 class WizardCb(CallbackData, prefix="wiz"):
     action: str  # "cancel" | "back" | "skip"

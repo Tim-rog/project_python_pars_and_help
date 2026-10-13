@@ -14,6 +14,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 bot_token_raw = os.getenv('BOT_TOKEN')
+proxy = os.getenv('PROXY') if os.getenv('PROXY') else None
 
 if bot_token_raw is None:
     raise ValueError("BOT_TOKEN не задан в переменных окружения.")
@@ -27,7 +28,7 @@ async def set_commands(bot: Bot):
 
 
 async def main():
-    session = AiohttpSession()
+    session = AiohttpSession(proxy=proxy)
 
     bot = Bot(token=BOT_TOKEN, session=session, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
     dp = Dispatcher(storage=MemoryStorage())
