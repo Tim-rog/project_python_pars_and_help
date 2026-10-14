@@ -1,16 +1,15 @@
-import os
 import asyncio
+import os
 
+from aiogram import Bot, Dispatcher
 from aiogram.client.default import DefaultBotProperties
 from aiogram.client.session.aiohttp import AiohttpSession
 from aiogram.enums import ParseMode
-
-from features.service import router as service_router
-from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage, SimpleEventIsolation
 from aiogram.types import BotCommand
-
 from dotenv import load_dotenv
+
+from features.service import router as service_router
 
 load_dotenv()
 bot_token_raw = os.getenv('BOT_TOKEN')

@@ -32,5 +32,9 @@ class TermsCb(CallbackData, prefix="cat"):
     value: str # "free" | "exchange" | "price"
 
 
+class PreviewCb(CallbackData, prefix="cat"):
+    action: str # "publish" | "edit"
+
+
 class WizardCb(CallbackData, prefix="wiz"):
     action: str  # "cancel" | "back" | "skip" | "done"

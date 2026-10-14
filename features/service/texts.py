@@ -1,9 +1,16 @@
 from aiogram import html
 
+from .callbacks import CATEGORY_LABELS
+
 TOTAL_STEPS = 7
 
 def step(n: int, question: str) -> str:
     return f"📝 Новое объявление • Шаг {n}/{TOTAL_STEPS}\n\n{question}"
+
+
+def published(title: str) -> str:
+    return PUBLISHED.format(title=html.quote(title))
+
 
 def item_preview(data: dict) -> str:
     terms = TERMS_LABELS[data["terms"]]
@@ -25,7 +32,7 @@ def item_preview(data: dict) -> str:
         "🔍 <b>Проверь объявление</b>\n"
         "<i>Вот так его увидят другие студенты</i>\n\n"
         f"📦 <b>{title}</b>\n"
-        f"📌 {category}\n\n"
+        f"{CATEGORY_LABELS[category]}\n\n"
         "📋 <b>Описание:</b>\n"
         f"{description}\n\n"
         f"<b>{terms}</b>\n"
@@ -47,6 +54,13 @@ ASK_TERMS = "<b>На каких условиях?</b>\n\nОтдашь беспл
 ASK_TRADE = "<b>Что хочешь взамен?</b>\n\nНапиши, что тебе было бы интересно получить в обмен."
 ASK_PRICE = "<b>Сколько просишь?</b>\n\n Укажи цену в рублях, одним числом."
 ASK_PLACE = "<b>Где можно забрать?</b>\n\nВыбери корпус или общежитие из списка либо напиши свой вариант."
+PUBLISHED = (
+    "✅ <b>Объявление опубликовано!</b>\n\n"
+    "«<b>{title}</b>» теперь в барахолке. Когда кто-то заинтересуется, "
+    "я пришлю тебе сообщение со ссылкой на его профиль.\n\n"
+    "Объявление можно найти в «<b>Мои объявления</b>» и закрыть, "
+    "когда вещь найдёт нового хозяина."
+)
 
 TERMS_LABELS = {
     "free": "🎁 Бесплатно",

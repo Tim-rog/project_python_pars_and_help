@@ -1,21 +1,22 @@
-from aiogram import html
 from aiogram import F, Router, types
+from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import Command, StateFilter
 from aiogram.fsm.context import FSMContext
-from aiogram.types import CallbackQuery, Message
+from aiogram.types import CallbackQuery, InlineKeyboardMarkup, Message
 
 from . import texts
-from .callbacks import CategoryCb, WizardCb, TermsCb
-from .keyboards import categories_kb, nav_kb, terms_kb, photos_kb
+from .callbacks import CategoryCb, PreviewCb, TermsCb, WizardCb
+from .keyboards import categories_kb, nav_kb, photos_kb, preview_kb, terms_kb
 from .screens import SCREENS
 from .states import NewItem
+
 router = Router(name="service")
 
 ALL_FIELDS = {
     NewItem.category.state: "category",
     NewItem.title.state: "title",
     NewItem.description.state: "description",
-    NewItem.photos.state: "photo",
+    NewItem.photos.state: "photos",
     NewItem.terms.state: "terms",
     NewItem.place.state: "place",
 }
@@ -88,16 +89,38 @@ async def show_error(message: Message, state: FSMContext, error: str, question: 
                                         )
 
 
-async def show_preview(message: types.Message, state: FSMContext):
-    data = await state.get_data()
-    print(data)
-    photos = data["photos"]
-    text = texts.item_preview(data)
+async def send_card(message: types.Message, state: FSMContext, text: str, send_photos: bool = False, 
+                    kb: InlineKeyboardMarkup | None = None):
+    photos = list(await state.get_value("photos") or [])
+    old_id = await state.get_value("wizard_msg_id")
 
-    if not photos:
-        await message.answer(text, reply_markup=nav_kb(back=False, skip=True))
+    if photos and send_photos:
+        msg = await message.answer_photo(photos[0], caption=text, reply_markup=kb)
     else:
-        await message.answer_photo(photos[0], caption=text, reply_markup=nav_kb(back=False, skip=True))
+        msg = await message.answer(text, reply_markup=kb)
+
+    await state.update_data(wizard_msg_id=msg.message_id)
+    
+    try:
+        await message.bot.delete_message(message.chat.id, old_id)
+    except TelegramBadRequest:
+        pass
+
+
+@router.callback_query(NewItem.preview, PreviewCb.filter(F.action == "publish"))
+async def publish_button(callback: CallbackQuery, state: FSMContext):
+    await callback.answer()
+    title = await state.get_value("title")
+
+    # TODO: сохранить объявление в базу данных
+
+    msg = callback.message
+    if msg.photo:
+        await msg.edit_caption(caption=texts.published(title), reply_markup=None)
+    else:
+        await msg.edit_text(texts.published(title), reply_markup=None)
+
+    await state.clear()
 
 
 async def process_step(message: types.Message, state: FSMContext, delete_msg: bool = True):
@@ -106,11 +129,13 @@ async def process_step(message: types.Message, state: FSMContext, delete_msg: bo
     next_state = NewItem.__states__[idx + 1]
 
     if next_state == NewItem.preview:
-        await state.set_state(next_state)
-        await show_preview(message, state)
+        data = await state.get_data()
 
-        if delete_msg:
-            await message.delete()
+        photos = data["photos"] or []
+        text = texts.item_preview(data)
+        
+        await state.set_state(next_state)
+        await send_card(message, state, text, photos, preview_kb())
 
         return
 
@@ -142,7 +167,7 @@ async def need_text(message: types.Message, state: FSMContext):
 
 @router.message(StateFilter(NewItem.photos), F.photo)
 async def process_photo(message: types.Message, state: FSMContext):
-    photos = list(await state.get_value("photos", []))
+    photos = list(await state.get_value("photos") or [])
     await message.delete()
 
     if len(photos) >= MAX_PHOTOS:
@@ -199,6 +224,7 @@ async def terms_text(message: Message, state: FSMContext):
     terms = await state.get_value("terms")
     if terms is None or terms == "free":
         return
+        return
 
     if terms == "price":
         raw = message.text.replace(" ", "").replace("₽", "").replace("р", "")
@@ -216,6 +242,7 @@ async def terms_text(message: Message, state: FSMContext):
 @router.callback_query(StateFilter(NewItem), WizardCb.filter(F.action == "back"))
 async def wizard_back(callback: CallbackQuery, state: FSMContext):
     idx = await get_state_index(state)
+    current_state = await state.get_state()
 
     if idx == 0:
         await callback.answer("Это первый шаг")
@@ -223,20 +250,29 @@ async def wizard_back(callback: CallbackQuery, state: FSMContext):
 
     # нужно, чтобы кнопка "назад" возвращала на предыдущий шаг, если пользователь выбрал "Обмен" или "Цена" и захотел
     # вернуться назад
-    if await state.get_state() == NewItem.terms.state and await state.get_value("terms"):
+    if current_state == NewItem.terms.state and await state.get_value("terms"):
         await state.update_data(terms=None)
+        await send_card(message=callback.message, state=state, text=texts.item_preview(await state.get_data()),)
         await callback.message.edit_text(texts.step(idx + 1, texts.ASK_TERMS), reply_markup=terms_kb())
         await callback.answer()
         return
 
     prev, text, make_kb = get_state_info(idx - 1)
-
     await state.set_state(prev)
 
+    # если юзер возвращается до условий или фоток - сбрасываем их
     if prev == NewItem.terms.state:
         await state.update_data(terms=None)
+    if prev == NewItem.photos.state:
+        await state.update_data(photos=[])
 
-    await callback.message.edit_text(texts.step(idx, text), reply_markup=make_kb())
+    # если юзер на шаге "превью" и хочет вернуться назад, нужно присылать новое сообщение вместо редактирования,
+    # т.к. старое с вложенными фотками редактировать нельзя. Ограничение телеграма
+    if current_state == NewItem.preview.state:
+        await send_card(callback.message, state, texts.step(idx, text), kb=make_kb())
+    else:
+        await callback.message.edit_text(texts.step(idx, text), reply_markup=make_kb())
+
     await callback.answer()
 
 

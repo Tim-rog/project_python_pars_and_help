@@ -2,7 +2,7 @@ from aiogram.enums import ButtonStyle
 from aiogram.types import InlineKeyboardMarkup
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-from .callbacks import CATEGORY_LABELS, CategoryCb, WizardCb, TermsCb
+from .callbacks import CATEGORY_LABELS, CategoryCb, PreviewCb, TermsCb, WizardCb
 
 
 def categories_kb() -> InlineKeyboardMarkup:
@@ -40,6 +40,18 @@ def photos_kb(has_photos: bool = False) -> InlineKeyboardMarkup:
     if has_photos:
         kb.button(text="Готово", callback_data=WizardCb(action="done"))
     kb.attach(nav_builder(back=True, skip=not has_photos))
+
+    return kb.as_markup()
+
+
+def preview_kb() -> InlineKeyboardMarkup:
+    kb = InlineKeyboardBuilder()
+
+    kb.button(text="Опубликовать", callback_data=PreviewCb(action="publish"), style=ButtonStyle.SUCCESS)
+    kb.button(text="Изменить", callback_data=PreviewCb(action="edit"))
+    kb.attach(nav_builder(back=True, skip=False))
+
+    kb.adjust(1, 3)
 
     return kb.as_markup()
 
